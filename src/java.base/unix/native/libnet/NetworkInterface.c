@@ -25,7 +25,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <net/if.h>
-#include <net/if_arp.h>
+
+#if !defined(__APPLE__)
+    #include <net/if_arp.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>

@@ -26,11 +26,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <objc/objc-runtime.h>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <Foundation/Foundation.h>
+#include <TargetConditionals.h>
+
+#if !(TARGET_OS_IPHONE)
+    #include <Security/AuthSession.h>
+    #include <objc/objc-runtime.h>
+#endif
 
 #include "java_props_macosx.h"
 
@@ -222,72 +227,15 @@ char *setupMacOSXLocale(int cat) {
     }
 }
 
-// 10.9 SDK does not include the NSOperatingSystemVersion struct.
-// For now, create our own
-typedef struct {
-        NSInteger majorVersion;
-        NSInteger minorVersion;
-        NSInteger patchVersion;
-} OSVerStruct;
-
 void setOSNameAndVersion(java_props_t *sprops) {
-    // Hardcode os_name, and fill in os_version
-    sprops->os_name = strdup("Mac OS X");
-
-    NSString *nsVerStr = NULL;
-    char* osVersionCStr = NULL;
-    // Mac OS 10.9 includes the [NSProcessInfo operatingSystemVersion] function,
-    // but it's not in the 10.9 SDK.  So, call it via NSInvocation.
-    if ([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
-        OSVerStruct osVer;
-        NSMethodSignature *sig = [[NSProcessInfo processInfo] methodSignatureForSelector:
-                @selector(operatingSystemVersion)];
-        NSInvocation *invoke = [NSInvocation invocationWithMethodSignature:sig];
-        invoke.selector = @selector(operatingSystemVersion);
-        [invoke invokeWithTarget:[NSProcessInfo processInfo]];
-        [invoke getReturnValue:&osVer];
-
-        // Copy out the char* if running on version other than 10.16 Mac OS (10.16 == 11.x)
-        // or explicitly requesting version compatibility
-        if (!((long)osVer.majorVersion == 10 && (long)osVer.minorVersion >= 16) ||
-                (getenv("SYSTEM_VERSION_COMPAT") != NULL)) {
-            if (osVer.patchVersion == 0) { // Omit trailing ".0"
-                nsVerStr = [NSString stringWithFormat:@"%ld.%ld",
-                        (long)osVer.majorVersion, (long)osVer.minorVersion];
-            } else {
-                nsVerStr = [NSString stringWithFormat:@"%ld.%ld.%ld",
-                        (long)osVer.majorVersion, (long)osVer.minorVersion, (long)osVer.patchVersion];
-            }
-        } else {
-            // Version 10.16, without explicit env setting of SYSTEM_VERSION_COMPAT
-            // AKA 11+ Read the *real* ProductVersion from the hidden link to avoid SYSTEM_VERSION_COMPAT
-            // If not found, fallback below to the SystemVersion.plist
-            NSDictionary *version = [NSDictionary dictionaryWithContentsOfFile :
-                             @"/System/Library/CoreServices/.SystemVersionPlatform.plist"];
-            if (version != NULL) {
-                nsVerStr = [version objectForKey : @"ProductVersion"];
-            }
-        }
-    }
-    // Fallback if running on pre-10.9 Mac OS
-    if (nsVerStr == NULL) {
-        NSDictionary *version = [NSDictionary dictionaryWithContentsOfFile :
-                                 @"/System/Library/CoreServices/SystemVersion.plist"];
-        if (version != NULL) {
-            nsVerStr = [version objectForKey : @"ProductVersion"];
-        }
-    }
-
-    if (nsVerStr != NULL) {
-        // Copy out the char*
-        osVersionCStr = strdup([nsVerStr UTF8String]);
-    }
-    if (osVersionCStr == NULL) {
-        osVersionCStr = strdup("Unknown");
-    }
-    sprops->os_version = osVersionCStr;
+#if TARGET_OS_IPHONE
+    sprops->os_name = "iOS";
+#else
+    sprops->os_name = "Mac OS X";
+#endif
+    NSString* version = [[NSProcessInfo processInfo] operatingSystemVersionString];
+    sprops->os_version = strdup([version UTF8String]);
 }
-
 
 static Boolean getProxyInfoForProtocol(CFDictionaryRef inDict, CFStringRef inEnabledKey,
                                        CFStringRef inHostKey, CFStringRef inPortKey,
@@ -419,6 +367,7 @@ void setUserHome(java_props_t *sprops) {
  * Method for fetching proxy info and storing it in the property list.
  */
 void setProxyProperties(java_props_t *sProps) {
+#if  !(TARGET_OS_IPHONE)
     if (sProps == NULL) return;
 
     char buf[16];    /* Used for %d of an int - 16 is plenty */
@@ -491,4 +440,5 @@ void setProxyProperties(java_props_t *sProps) {
 #undef CHECK_PROXY
 
     CFRelease(dict);
+#endif
 }

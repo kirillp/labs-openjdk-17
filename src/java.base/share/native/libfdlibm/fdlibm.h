@@ -31,6 +31,10 @@
 #endif
 #include "jfdlibm.h"
 
+#ifdef  MACOSX
+    #include <TargetConditionals.h>
+#endif
+
 #ifdef __NEWVALID       /* special setup for Sun test regime */
 #if defined(i386) || defined(i486) || \
     defined(intel) || defined(x86) || defined(arm) || \
@@ -141,7 +145,16 @@ extern double fmod __P((double, double));
 
 extern double hypot __P((double, double));
 extern int isnan __P((double));
-extern int finite __P((double));
+
+#ifdef TARGET_OS_SIMULATOR
+// Simulator - iOS 14.4: /usr/unclude/math.h 
+// extern int finite(double)
+// __API_DEPRECATED("Use `isfinite((double)x)` instead.", macos(10.0, 10.9)) __API_UNAVAILABLE(ios, watchos, tvos);
+    int m_finite(double);
+    #define finite m_finite
+#else
+    extern int finite __P((double));
+#endif
 
 extern double atanh __P((double));
 extern double cbrt __P((double));

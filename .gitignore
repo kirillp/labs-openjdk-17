@@ -27,3 +27,5 @@ NashornProfile.txt
 **/.pydevproject
 **/.settings/
 **/*.pyc
+/xcode/
+/jdk-ios.xcodeproj/project.xcworkspace/
