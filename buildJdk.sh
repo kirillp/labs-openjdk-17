@@ -10,3 +10,5 @@ sh configure --with-conf-name=labsjdk \
     --with-vendor-bug-url=https://github.com/oracle/graal/issues \
     --with-vendor-vm-bug-url=https://github.com/oracle/graal/issues
 make CONF_NAME=labsjdk graal-builder-image
+
+sh xcodebuild.sh
