@@ -8,7 +8,8 @@ sh configure --with-conf-name=labsjdk \
     '--with-vendor-name=GraalVM Community' \
     --with-vendor-url=https://www.graalvm.org/ \
     --with-vendor-bug-url=https://github.com/oracle/graal/issues \
-    --with-vendor-vm-bug-url=https://github.com/oracle/graal/issues
+    --with-vendor-vm-bug-url=https://github.com/oracle/graal/issues \
+    --disable-warnings-as-errors
 make CONF_NAME=labsjdk graal-builder-image
 
 sh xcodebuild.sh
